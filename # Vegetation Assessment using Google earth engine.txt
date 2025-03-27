@@ -1,0 +1,22 @@
+# Vegetation Assessment using Google Earth Engine (GEE)
+
+This repository contains **Google Earth Engine (GEE)** scripts for vegetation analysis using **NDVI**, **MNDWI**, and **VFC** derived from **MODIS** and **Landsat** datasets. The analysis covers the years 2001-2021.
+
+## Dataset Information
+The dataset is derived from the **MODIS** and **Landsat** products:
+- **MODIS** data: [MODIS Website](https://modis.gsfc.nasa.gov/)
+- **Landsat** data: [Landsat Website](https://landsat.visibleearth.nasa.gov/)
+
+The vegetation indices are calculated using the following steps:
+1. **NDVI** (Normalized Difference Vegetation Index) is used to assess vegetation health and cover.
+2. **MNDWI** (Modified Normalized Difference Water Index) is calculated to assess water bodies.
+3. **VFC** (Vegetation Fraction Cover) is derived to estimate the fraction of land covered by vegetation.
+
+## How to Use
+1. Sign in to [Google Earth Engine](https://code.earthengine.google.com/).
+2. Copy and paste the provided **GEE script** into the editor.
+3. Run the script to calculate NDVI, MNDWI, and VFC for your desired region and time frame.
+4. Analyze and visualize the outputs within **Google Earth Engine** or export them for further analysis in **ArcGIS**.
+
+## Citation
+If you use this code or the data in your research, please cite the following:

@@ -1,0 +1,38 @@
+var styling = {color:'red',fillColor:'00000000'}
+Map.centerObject(roi,6)
+Map.addLayer(roi.style(styling),{},'Bound')
+
+function rmCloud (image){
+  var cloudShadowBitMask = (1 << 3);
+  var cloudsBitMask = (1 << 5);
+  var qa = image.select('pixel_qa');
+  var mask = qa.bitwiseAnd(cloudShadowBitMask).eq(0)
+                 .and(qa.bitwiseAnd(cloudsBitMask).eq(0));
+  return image.updateMask(mask);
+}
+
+var L8 = ee.ImageCollection("LANDSAT/LC08/C01/T1_SR")
+var img = L8.filterBounds(roi)
+          .filterDate("2001-01-01","2022-7-30")
+          .filterMetadata('CLOUD_COVER','less_than',25)
+          .map(rmCloud).mean().clip(roi)
+
+var ndvi = img.normalizedDifference(['B5','B4'])
+img = img.addBands(ndvi.rename('NDVI'))
+
+var visParam = {
+ min: -0.2,
+ max: 0.8,
+ palette: 'FFFFFF, CE7E45, DF923D, F1B555, FCD163, 99B718, 74A901, 66A000, 529400,' +
+   '3E8601, 207401, 056201, 004C00, 023B01, 012E01, 011D01, 011301'
+};
+
+Map.addLayer(ndvi,visParam,"NDVI")
+
+Export.image.toDrive({
+   image: ndvi,
+   description: 'NDVI',
+   scale:30,
+   region: roi,
+   maxPixels: 1e13,
+})

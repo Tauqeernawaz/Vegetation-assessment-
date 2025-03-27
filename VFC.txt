@@ -1,0 +1,74 @@
+var wuhan = roi
+
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+
+  return image.updateMask(mask).divide(10000);
+}
+var dataset_sentinel2=ee.ImageCollection("COPERNICUS/S2_SR")
+                        .filterDate('2020-08-01','2020-8-31')
+                        .filterBounds(wuhan)//
+                        .filterMetadata('CLOUDY_PIXEL_PERCENTAGE',"less_than",20)
+                        .map(maskS2clouds)
+print(dataset_sentinel2)
+
+var mid_image=dataset_sentinel2.median().clip(wuhan.geometry());
+var visualization = {
+  min: 0.0,
+  max: 0.3,
+  bands: ['B4', 'B3', 'B2'],
+};
+Map.addLayer(mid_image,visualization,'RGB')
+
+var NDVI=mid_image.normalizedDifference(["B8","B4"]).rename("NDVI")
+print(NDVI)
+Map.addLayer(NDVI.lt(0))//water
+Map.addLayer(mid_image.updateMask(NDVI.gt(0)),visualization,'RGB1')
+var mask_water_NDVI=NDVI.updateMask(NDVI.gt(0))//mask water
+//var chart=ui.Chart.image.histogram(mask_water_NDVI,wuhan,100)
+//print(chart)
+function calFVC(BestVI,region,scale){
+    var num = BestVI.reduceRegion({
+      reducer:ee.Reducer.percentile([5,95]),
+      geometry:region,
+      scale:scale,
+      maxPixels:1e13
+    });
+    var min = ee.Number(num.get("NDVI_p5"));
+    var max = ee.Number(num.get("NDVI_p95"));
+    //print(top_min);
+    //print(top_max);
+    //quantile and combine
+    var greaterPart = BestVI.gt(max);
+    var lessPart = BestVI.lt(min);
+    var middlePart =ee.Image(1).subtract(greaterPart).subtract(lessPart);
+    //calculate FVC
+    var tempf1=BestVI.subtract(min).divide(max.subtract(min));
+    var FVC=ee.Image(1).multiply(greaterPart).add(ee.Image(0).multiply(lessPart))
+                      .add(tempf1.multiply(middlePart))
+    return FVC.rename('FVC');
+}
+var FVC=calFVC(mask_water_NDVI,wuhan,10)
+print(FVC)
+var chart=ui.Chart.image.histogram({
+  image:FVC,
+  region:wuhan,
+  scale:250,
+  //maxPixels:1e13
+})
+print(chart)
+Export.image.toDrive({
+  image: FVC,
+  description: "tauqeerfvc",
+  scale: 10,
+  region: wuhan.geometry(),
+  maxPixels: 1e13
+});
